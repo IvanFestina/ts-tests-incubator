@@ -1,0 +1,501 @@
+1
+
+
+import ReactDOM from 'react-dom'
+import {applyMiddleware, combineReducers, createStore, Dispatch} from 'redux'
+import thunk from 'redux-thunk'
+import {Provider, useDispatch, useSelector} from 'react-redux'
+import {ChangeEvent, useState} from 'react'
+import {HashRouter, Route, Routes, useNavigate} from 'react-router-dom'
+import axios from 'axios'
+
+const initState = {isAuth: false}
+
+const appReducer = (state = initState, action: any) => {
+    switch (action.type) {
+        case 'SET_AUTH':
+            return {...state, isAuth: action.isAuth}
+        // ...
+    }
+    return state
+}
+
+const reducers = combineReducers({
+    app: appReducer,
+    // ...
+})
+
+const store = createStore(reducers, applyMiddleware(thunk))
+
+const setAuth = (isAuth: boolean) => ({type: 'SET_AUTH', isAuth} as const)
+// ...
+
+const loginTC = (login: string, pass: string) => (dispatch: Dispatch) => {
+    axios
+        .post('http://super-work.com/login', {login, pass})
+        .then(() => dispatch(setAuth(true)))
+
+}
+
+const Login = () => {
+    const {isAuth} = useSelector((state: any) => state.app)
+    const dispatch = useDispatch()
+    const navigate = useNavigate()
+    const [login, setLogin] = useState('')
+    const [pass, setPass] = useState('')
+
+    const changeLogin = (e: ChangeEvent<HTMLInputElement>) => {
+        setLogin(e.target.value)
+    }
+    const changePass = (e: ChangeEvent<HTMLInputElement>) => {
+        setPass(e.target.value)
+    }
+
+    if (isAuth) {
+        navigate('/profile')
+    }
+
+    return (
+        <div>
+            <input
+                value={login}
+                onChange={changeLogin}
+
+            />
+            <input
+                value={pass}
+                onChange={changePass}
+
+            />
+            <button
+                disabled={!login || !pass}
+
+            >
+                login
+            </button>
+        </div>
+    )
+}
+
+export const HardWork = () => {
+
+    return (
+        <div>
+            <Routes>
+                <Route path={'/'} element={<Login/>}/>
+                <Route path={'/profile'} element={<div>Profile</div>}/>
+            </Routes>
+        </div>
+    )
+}
+
+ReactDOM.render(<Provider store={store}><HashRouter><HardWork/></HashRouter></Provider>,
+    document.getElementById('root')
+)
+
+// помогите джуниор-разработчику исправить код так
+// что бы можно было залогиниться
+// укажите номер строки и необходимый код для неё
+
+// пример ответа: 51  if (!isAuth) {
+
+// неправилный ответ: 38 const isAuth = useSelector((state: any) => state.app.isAuth)
+
+
+
+2
+
+
+
+import ReactDOM from 'react-dom'
+import {HashRouter, Route, Routes, useNavigate, useParams} from 'react-router-dom'
+import {useEffect} from 'react'
+
+const Login = () => {
+    const navigate = useNavigate()
+
+    useEffect(() => {
+        navigate('/secret/1111')
+    }, [])
+
+    return (
+        <div>Login</div>
+    )
+}
+const SecretToken = () => {
+    const token = 'no token' // тут
+
+    return (
+        <div>token: {token}</div>
+    )
+}
+
+export const Secret = () => {
+
+    return (
+        <div>
+            <Routes>
+                <Route path={'/'} element={<Login/>}/>
+                <Route path={'/secret/:token'} element={<SecretToken/>}/>
+            </Routes>
+        </div>
+    )
+}
+
+ReactDOM.render(<div><HashRouter><Secret/></HashRouter></div>,
+    document.getElementById('root')
+)
+
+// исправьте код на 16 строке так
+// что бы на странице отобразился токен
+
+// пример ответа: const token = '123'
+
+// no ответ: нужно добавить номер строки const token = '1111'
+
+
+
+3
+
+
+
+import ReactDOM from 'react-dom'
+import {applyMiddleware, combineReducers, createStore, Dispatch} from 'redux'
+import thunk from 'redux-thunk'
+import {Provider, useDispatch, useSelector} from 'react-redux'
+import {useEffect} from 'react'
+import {HashRouter, Route, Routes, useNavigate} from 'react-router-dom'
+import axios from 'axios'
+
+const initState = {isAuth: false, isLoading: true}
+
+const appReducer = (state = initState, action: any) => {
+    switch (action.type) {
+        case 'SET_LOADING':
+            return {...state, isLoading: action.isLoading}
+    }
+    return state
+}
+
+const reducers = combineReducers({
+    app: appReducer,
+    // ...
+})
+
+const store = createStore(reducers, applyMiddleware(thunk))
+
+const setLoading = (isLoading: boolean) => ({type: 'SET_LOADING', isLoading} as const)
+// ...
+
+const me = () => (dispatch: Dispatch) => {
+    axios
+        .get('http://loading.com/me')
+        .then((res) => {
+            // ...
+            dispatch(setLoading(false))
+
+        })
+
+}
+
+const Loading = () => <div>Крутилка...</div>
+
+const Login = () => {
+    console.log('LOGIN!!!')
+    const {isAuth, isLoading} = useSelector((state: any) => state.app)
+    const navigate = useNavigate()
+
+    useEffect(() => {
+        if (isAuth) navigate('/profile')
+    }, [isAuth])
+
+    return (
+        <div>
+
+            login
+        </div>
+    )
+}
+const Profile = () => {
+    const {isAuth, isLoading} = useSelector((state: any) => state.app)
+    const navigate = useNavigate()
+
+    useEffect(() => {
+        if (!isAuth) navigate('/login')
+    }, [isAuth])
+
+    return (
+        <div>
+
+            Profile
+        </div>
+    )
+}
+
+export const AppLoading = () => {
+    const {isAuth, isLoading} = useSelector((state: any) => state.app)
+    const dispatch = useDispatch()
+    const navigate = useNavigate()
+    useEffect(() => {
+        dispatch(me())
+        navigate('/profile')
+
+    }, [])
+
+    return (
+        <div>
+
+            <Routes>
+                <Route path={'/'} element={<div>start</div>}/>
+                <Route path={'/login'} element={<Login/>}/>
+                <Route path={'/profile'} element={<Profile/>}/>
+            </Routes>
+        </div>
+    )
+}
+
+ReactDOM.render(<Provider store={store}><HashRouter><AppLoading/></HashRouter></Provider>,
+    document.getElementById('root')
+)
+
+// необходимо сделать так
+// что бы пользователь НИРАЗУ не посетил страницу Логин пока идёт запрос на ми
+// вместо этого он должен видеть крутилку
+// укажите номер строки и необходимый код для неё
+
+// пример ответа: 53 <Loading/>
+
+// no ответ: 30 dispatch(setLoading(true))
+
+
+
+
+
+
+
+
+
+
+4
+
+
+
+
+
+
+
+
+
+import ReactDOM from 'react-dom'
+import {HashRouter, Route, Routes, useNavigate, useParams} from 'react-router-dom'
+import {useEffect} from 'react'
+
+const Login = () => {
+    const navigate = useNavigate()
+
+    useEffect(() => {
+        navigate('/balance/500')
+    }, [])
+
+    return (
+        <div>Login</div>
+    )
+}
+
+const Balance = () => {
+    let balance: any = 100
+    const params = useParams()
+
+    if (params.bonus) {
+        balance = balance + params.bonus
+    }
+
+    return (
+        <div>
+            balance:
+            {balance}
+        </div>
+    )
+}
+
+export const NewBank = () => {
+
+    return (
+        <div>
+            <Routes>
+                <Route path={'/'} element={<Login/>}/>
+                <Route path={'/balance/:bonus'} element={<Balance/>}/>
+            </Routes>
+        </div>
+    )
+}
+
+ReactDOM.render(<div><HashRouter><NewBank/></HashRouter></div>,
+    document.getElementById('root')
+)
+
+// исправьте код так
+// что бы бонус прибавлялся правильно
+// укажите номер строки и необходимый код для неё
+
+// пример ответа: 18 let balance = 600
+
+// правильный ответ:
+
+
+
+5
+
+
+
+
+import ReactDOM from 'react-dom'
+import {HashRouter, Route, Routes, useNavigate, useParams} from 'react-router-dom'
+import React from 'react'
+
+type UserType = {
+    id: number
+    name: string
+    avatar: string
+    age: number
+    address: string
+}
+
+const users: UserType[] = [
+    {
+        id: 1,
+        name: 'my Name',
+        age: 32,
+        avatar: '—ฅ/ᐠ.̫ .ᐟ\\ฅ—',
+        address: 'my Address'
+    },
+    {
+        id: 2,
+        name: 'some Name',
+        age: 22,
+        avatar: ':)',
+        address: 'some Address'
+    },
+    {
+        id: 3,
+        name: 'any Name',
+        age: 18,
+        avatar: '^._.^',
+        address: 'any Address'
+    },
+    {
+        id: 4,
+        name: 'Name',
+        age: 38,
+        avatar: '/ᐠ-ꞈ-ᐟ\\',
+        address: 'Address'
+    },
+
+]
+
+const MyProfile = () => {
+    const navigate = useNavigate()
+    const friends = users.filter(u => u.id !== 1)
+
+    const mappedFriends = friends.map((f, i) => {
+        const go = () => {
+            navigate('/friend/' + f.id)
+        }
+
+        return (
+            <div key={i} onClick={go} style={{paddingLeft: 24, color: 'blue', cursor: 'pointer'}}>
+                {f.name}, {f.age}
+            </div>
+        )
+    })
+
+    return (
+        <div>
+            <Profile userId={1}/>
+            friends:
+            {mappedFriends}
+        </div>
+    )
+}
+const Profile: React.FC<{ userId?: number }> = ({userId}) => {
+    const {id} = useParams<'id'>()
+    const user = users.find(u => u.id === +(id || userId || 0))
+
+    return (
+        <div style={{display: 'flex', justifyContent: 'space-around', alignItems: 'center'}}>
+            <div>
+                {user?.avatar}
+            </div>
+            <div>
+                <div>name: {user?.name}</div>
+                <div>age: {user?.age}</div>
+                <div>address: {user?.address}</div>
+            </div>
+        </div>
+    )
+}
+
+export const Friends = () => {
+
+    return (
+        <div>
+            <Routes>
+                <Route path={'/'} element={<MyProfile/>}/>
+                <Route path={'/friend'} element={<Profile/>}/>
+                <Route path={'/*'} element={<div>404 Page Not Found</div>}/>
+            </Routes>
+        </div>
+    )
+}
+
+ReactDOM.render(<div><HashRouter><Friends/></HashRouter></div>,
+    document.getElementById('root')
+)
+
+// пользователи не могут посмотреть своих друзей
+// исправьте код что бы смогли
+// укажите номер строки и исправленный код для неё
+
+// пример ответа: 63 <Profile userId={4}/>
+
+// правильный ответ:
+
+
+
+6
+
+
+
+
+import ReactDOM from 'react-dom'
+import React, {useEffect, useState} from 'react'
+
+export const Mining = () => {
+    const [btc, setBtc] = useState(0)
+
+    const mining = (coin: number) => coin + 1
+
+    useEffect(() => {
+        setInterval(() => {
+            setBtc(mining(btc))
+        }, 1000)
+    }, [])
+
+    return (
+        <div>
+            BTC: {btc}
+        </div>
+    )
+}
+
+ReactDOM.render(<div><Mining/></div>,
+    document.getElementById('root')
+)
+
+// помогите джуниор-разработчику намайнить биткоинов
+// что-то не майнятся
+// укажите номер строки и исправленный код для неё
+
+// пример ответа: 7 const mining = (coin: number) => coin + 2
+
+// правильный ответ:
