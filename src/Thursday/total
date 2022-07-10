@@ -1,0 +1,1350 @@
+1
+
+import axios from 'axios'
+  import React, { ChangeEvent, useEffect, useState } from 'react'
+  import ReactDOM from 'react-dom/client';
+
+  // Types
+  type CommentType = {
+      postId: number
+      id: number
+      name: string
+      email: string
+      body: string
+  }
+
+  // Api
+  const instance = axios.create({
+      baseURL: 'https://jsonplaceholder.typicode.com/'
+  })
+
+  const commentsAPI = {
+      getComments() {
+          return instance.get<CommentType[]>('comments?_limit=10')
+      },
+      createComment(body: string) {
+          const payload = {
+              body,
+              email: 'test@gmail.com',
+              name: 'Name',
+              postId: Math.random()
+          }
+          // Promise.resolve() стоит в качестве заглушки, чтобы TS не ругался и код компилировался
+          // Promise.resolve() нужно удалить и написать правильный запрос для создания нового комментария
+          return Promise.resolve()
+      }
+  }
+
+
+  // App
+  export const App = () => {
+
+      const [comments, setComments] = useState<CommentType[]>([])
+      const [commentBody, setCommentBody] = useState('')
+
+      useEffect(() => {
+          commentsAPI.getComments()
+              .then((res) => {
+                  setComments(res.data)
+              })
+      }, [])
+
+      const createPostHandler = () => {
+          commentsAPI.createComment(commentBody)
+              .then((res: any) => {
+                  const newComment = res.data
+                  setComments([newComment, ...comments])
+                  setCommentBody('')
+              })
+      };
+
+      const createTitleHandler = (e: ChangeEvent<HTMLInputElement>) => {
+          setCommentBody(e.currentTarget.value)
+      };
+
+      return (
+          <>
+              <h1>📝 Список комментариев</h1>
+
+              <div style={{marginBottom: '15px'}}>
+                  <input style={{width: '300px'}}
+                         type="text"
+                         value={commentBody}
+                         placeholder={'Введите новый комментрарий'}
+                         onChange={createTitleHandler}
+                  />
+                  <button style={{marginLeft: '15px'}}
+                          onClick={() => createPostHandler()}>
+                      Добавить новый комментарий
+                  </button>
+              </div>
+
+              {
+                  comments.map(c => {
+                      return <div key={c.id}><b>Comment</b>: {c.body} </div>
+                  })
+              }
+          </>
+      )
+  }
+
+  const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
+  root.render(<App/>)
+
+  // Описание:
+  // Напишите запрос на сервер для создания нового комментария.
+  // Типизацию возвращаемых данных в ответе указывать необязательно, но можно и указать (в ответах учтены оба варианта).
+  // Исправленную версию строки напишите в качестве ответа.
+  // Пример ответа: return Promise.resolve<PostType[]>(data)
+//         return instance.get('comments?_limit=10') ? некорректный
+
+2
+
+
+import axios from 'axios'
+import React, { useEffect, useState } from 'react'
+import ReactDOM from 'react-dom/client'
+
+// Types
+type PhotoType = {
+    albumId: number
+    id: number
+    title: string
+    url: string
+    thumbnailUrl: string
+}
+
+
+// Api
+const instance = axios.create({
+    baseURL: 'https://jsonplaceholder.typicode.com/'
+})
+
+const photosAPI = {
+    getPhotos(page: number) {
+        return instance.get<PhotoType[]>(`photos?_limit=2?_page${page}`)
+    }
+}
+
+
+// App
+
+const buttons = [
+    {id: 1, title: '1'},
+    {id: 2, title: '2'},
+    {id: 3, title: '3'},
+]
+
+export const App = () => {
+
+    const [photos, setPhotos] = useState<PhotoType[]>([])
+    const [currentPage, setCurrentPage] = useState(1)
+
+    useEffect(() => {
+        photosAPI.getPhotos(currentPage)
+            .then((res) => {
+                setPhotos(res.data)
+            })
+    }, [currentPage])
+
+    const setPageHandler = (page: number) => {
+        setCurrentPage(page)
+    };
+
+    return (
+        <>
+            <h1>📸 Список фоток</h1>
+            {/* Photos */}
+            {
+                photos.map(p => {
+                    return <div style={{marginBottom: '25px'}} key={p.id}>
+                        <b>title</b>: {p.title}
+                        <div><img src={p.thumbnailUrl} alt=""/></div>
+                    </div>
+                })
+            }
+
+            {/* Buttons */}
+            {
+                buttons.map(b => {
+                    return (
+                        <button key={b.id}
+                                style={b.id === currentPage ? {backgroundColor: 'lightblue'} : {}}
+                                onClick={() => setPageHandler(b.id)}>
+                            {b.title}
+                        </button>
+                    )
+                })
+            }
+        </>
+    )
+}
+
+
+const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
+root.render(<App/>)
+
+// Описание:
+// Пагинация не работает.
+// При переходе по страницам, контент (описание и изображение фоток) должен меняться.
+// Подсказка. В одной строке кода допущено 2 ошибки.
+// Задача: найти эти ошибки, и исправленную версию строки написать в качестве ответа.
+// Пример ответа: const [currentPage, setCurrentPage] = useState(page)
+//         return instance.get<PhotoType[]>(`photos?_limit=2&_page=${page}`) +
+
+
+3
+
+
+import React, { useEffect } from 'react'
+import ReactDOM from 'react-dom/client';
+import { applyMiddleware, combineReducers, legacy_createStore as createStore } from 'redux'
+import thunk, { ThunkAction, ThunkDispatch } from 'redux-thunk';
+import { Provider, TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux'
+import axios from 'axios';
+
+
+// Types
+type PostType = {
+    body: string
+    id: number
+    title: string
+    userId: number
+}
+
+// Api
+const instance = axios.create({
+    baseURL: 'https://jsonplaceholder.typicode.com/'
+})
+
+const postsAPI = {
+    getPosts() {
+        return instance.get<PostType[]>('posts?_limit=10')
+    },
+    createPost() {
+        const payload = {
+            body: 'new post body',
+            title: 'new post title',
+            userId: 1
+        }
+        return instance.post('posts', payload)
+    }
+}
+
+// Reducer
+const initState = [] as PostType[]
+
+type InitStateType = typeof initState
+
+const postsReducer = (state: InitStateType = initState, action: ActionsType) => {
+    switch (action.type) {
+        case 'POSTS/GET-POSTS':
+            return action.posts
+
+        case 'POSTS/CREATE-POST':
+            return [action.post, ...state]
+
+        default:
+            return state
+    }
+}
+
+
+const getPostsAC = (posts: PostType[]) => ({type: 'POSTS/GET-POSTS', posts} as const)
+const createPostAC = (post: PostType) => ({type: 'POSTS/CREATE-POST', post} as const)
+
+type ActionsType = ReturnType<typeof getPostsAC> | ReturnType<typeof createPostAC>
+
+const getPostsTC = (): AppThunk => (dispatch) => {
+    postsAPI.getPosts()
+        .then((res) => {
+            dispatch(getPostsAC(res.data))
+        })
+}
+
+const addPostTC = (): AppThunk => (dispatch) => {
+    postsAPI.createPost()
+        .then((res) => {
+            dispatch(createPostAC(res.data))
+        })
+}
+
+// Store
+const rootReducer = combineReducers({
+    posts: postsReducer,
+})
+
+const store = createStore(rootReducer, applyMiddleware(thunk))
+type RootState = ReturnType<typeof store.getState>
+type AppDispatch = ThunkDispatch<RootState, unknown, ActionsType>
+type AppThunk<ReturnType = void> = ThunkAction<ReturnType, RootState, unknown, ActionsType>
+const useAppDispatch = () => useDispatch<AppDispatch>()
+const useAppSelector: TypedUseSelectorHook<RootState> = useSelector
+
+
+// App
+const App = () => {
+    const dispatch = useAppDispatch()
+    const posts = useAppSelector(state => state.posts)
+
+    useEffect(() => {
+        dispatch(getPostsTC())
+    }, [])
+
+    const addPostHandler = () => {
+        alert('Пост добавить не получилось. Напишите код самостоятельно 🚀')
+    };
+
+    return (
+        <>
+            <h1>📜 Список постов</h1>
+            <button style={{marginBottom: '10px'}} onClick={addPostHandler}>Добавить пост</button>
+            {
+                posts.map(p => {
+                    return <div key={p.id}><b>title</b>: {p.title}</div>
+                })
+            }
+        </>
+    )
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
+root.render(<Provider store={store}> <App/></Provider>)
+
+// Описание:
+// При нажатии на кнопку "Добавить пост" пост должен добавиться,
+// но появляется alert.
+// Вместо alerta напишите код, чтобы пост добавлялся.
+// Правильную версию строки напишите в качестве ответа.
+// Пример ответа: return instance.get<PostType[]>('posts?_limit=10')
+//         dispatch(addPostTC()) +
+
+
+4
+
+
+import axios from 'axios'
+import React, { useEffect } from 'react'
+import ReactDOM from 'react-dom/client';
+import { Provider, TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
+import { applyMiddleware, combineReducers, legacy_createStore as createStore } from 'redux';
+import thunk, { ThunkAction, ThunkDispatch } from 'redux-thunk';
+
+// Types
+type CommentType = {
+    postId: number
+    id: number
+    name: string
+    email: string
+    body: string
+}
+
+// Api
+const instance = axios.create({
+    baseURL: 'https://jsonplaceholder.typicode.com/'
+})
+
+const commentsAPI = {
+    getComments() {
+        return instance.get<CommentType[]>('comments?_limit=10')
+    }
+}
+
+// Reducer
+const initState = [] as CommentType[]
+
+type InitStateType = typeof initState
+
+const commentsReducer = (state: InitStateType = initState, action: ActionsType) => {
+    switch (action.type) {
+        case 'COMMENTS/GET-COMMENTS':
+            return action.comments
+        default:
+            return state
+    }
+}
+
+const getCommentsAC = (comments: CommentType[]) => ({type: 'COMMENTS/GET-COMMENTS', comments} as const)
+type ActionsType = ReturnType<typeof getCommentsAC>
+
+const getCommentsTC = (): ThunkAction<any, any, any, any> => (dispatch) => {
+    commentsAPI.getComments()
+        .then((res) => {
+            dispatch(getCommentsAC(res.data))
+        })
+}
+
+
+// Store
+const rootReducer = combineReducers({
+    comments: commentsReducer,
+})
+
+const store = createStore(rootReducer, applyMiddleware(thunk))
+type RootState = ReturnType<typeof store.getState>
+type AppDispatch = ThunkDispatch<RootState, unknown, ActionsType>
+const useAppDispatch = () => useDispatch<AppDispatch>()
+const useAppSelector: TypedUseSelectorHook<RootState> = useSelector
+
+// App
+export const App = () => {
+
+    const comments = useAppSelector(state => state.comments)
+    const dispatch = useAppDispatch()
+
+    useEffect(() => {
+        dispatch(getCommentsTC())
+    }, [])
+
+    return (
+        <>
+            <h1>📝 Список комментариев</h1>
+            {
+                comments.map(c => {
+                    return <div key={c.id}><b>Comment</b>: {c.body} </div>
+                })
+            }
+        </>
+    )
+}
+
+
+const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
+root.render(<Provider store={store}> <App/></Provider>)
+
+// Описание:
+// Ваша задача стоит в том чтобы правильно передать нужные типы в дженериковый тип ThunkAction<any, any, any, any>.
+// Что нужно написать вместо any, any, any, any чтобы правильно типизировать thunk creator?
+// Ответ дайте через пробел
+// Пример ответа: unknown status isDone void
+// ++ void ...
+
+
+5
+
+
+import React, { useEffect } from 'react'
+import ReactDOM from 'react-dom/client';
+import { applyMiddleware, combineReducers, legacy_createStore as createStore } from 'redux'
+import thunk, { ThunkAction, ThunkDispatch } from 'redux-thunk';
+import { Provider, TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux'
+import axios from 'axios';
+
+// Types
+type PostType = {
+    body: string
+    id: number
+    title: string
+    userId: number
+}
+
+// Api
+const instance = axios.create({
+    baseURL: 'https://jsonplaceholder.typicode.com/'
+})
+
+const postsAPI = {
+    getPosts() {
+        return instance.get<PostType[]>('posts?_limit=15')
+    },
+    updatePostTitle(post: PostType) {
+        return instance.put<PostType>(`posts/${post.id}`, post)
+    }
+}
+
+
+// Reducer
+const initState = [] as PostType[]
+
+type InitStateType = typeof initState
+
+const postsReducer = (state: InitStateType = initState, action: ActionsType) => {
+    switch (action.type) {
+        case 'POSTS/GET-POSTS':
+            return action.posts
+
+        case 'POSTS/UPDATE-POST-TITLE':
+            return state.map((p) => {
+                if (p.id === action.post.id) {
+                    return {...p, title: action.post.title}
+                } else {
+                    return p
+                }
+            })
+
+        default:
+            return state
+    }
+}
+
+const getPostsAC = (posts: PostType[]) => ({type: 'POSTS/GET-POSTS', posts} as const)
+const updatePostTitleAC = (post: PostType) => ({type: 'POSTS/UPDATE-POST-TITLE', post} as const)
+type ActionsType = ReturnType<typeof getPostsAC> | ReturnType<typeof updatePostTitleAC>
+
+const getPostsTC = (): AppThunk => (dispatch) => {
+    postsAPI.getPosts()
+        .then((res) => {
+            dispatch(getPostsAC(res.data))
+        })
+}
+
+const updatePostTC = (postId: number): AppThunk => (dispatch, getState: any) => {
+    try {
+        const currentPost = getState().find((p: PostType) => p.id === postId)
+
+        if (currentPost) {
+            const payload = {...currentPost, title: 'Летим 🚀'}
+            postsAPI.updatePostTitle(payload)
+                .then((res) => {
+                    dispatch(updatePostTitleAC(res.data))
+                })
+        }
+    } catch (e) {
+        alert('Обновить пост не удалось 😢')
+    }
+
+}
+
+// Store
+const rootReducer = combineReducers({
+    posts: postsReducer,
+})
+
+const store = createStore(rootReducer, applyMiddleware(thunk))
+type RootState = ReturnType<typeof store.getState>
+type AppDispatch = ThunkDispatch<RootState, unknown, ActionsType>
+type AppThunk<ReturnType = void> = ThunkAction<ReturnType, RootState, unknown, ActionsType>
+const useAppDispatch = () => useDispatch<AppDispatch>()
+const useAppSelector: TypedUseSelectorHook<RootState> = useSelector
+
+// App
+const App = () => {
+    const dispatch = useAppDispatch()
+    const posts = useAppSelector(state => state.posts)
+
+    useEffect(() => {
+        dispatch(getPostsTC())
+    }, [])
+
+    const updatePostHandler = (postId: number) => {
+        dispatch(updatePostTC(postId))
+    }
+
+    return (
+        <>
+            <h1>📜 Список постов</h1>
+            {
+                posts.map(p => {
+                    return <div key={p.id}>
+                        <b>title</b>: {p.title}
+                        <button onClick={() => updatePostHandler(p.id)}>Обновить пост</button>
+                    </div>
+                })
+            }
+        </>
+    )
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
+root.render(<Provider store={store}> <App/></Provider>)
+
+// Описание:
+// Попробуйте обновить пост и вы увидите alert с ошибкой.
+// Debugger / network / console.log вам в помощь
+// Найдите ошибку и вставьте исправленную строку кода в качестве ответа.
+// Пример ответа: const payload = {...currentPost, tile: 'Летим 🚀'}
+// Подсказка. Избавьтесь от всех any и решение придет само собой 😉
+// const currentPost = getState().posts.find((p: PostType) => { --
+
+
+6
+
+
+import React, { useEffect } from 'react'
+import ReactDOM from 'react-dom/client';
+import { applyMiddleware, combineReducers, legacy_createStore as createStore } from 'redux'
+import { Provider, TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux'
+import thunk, { ThunkAction, ThunkDispatch } from 'redux-thunk'
+import axios, { AxiosError } from 'axios';
+
+
+// Types
+type PostType = {
+    body: string
+    id: number
+    title: string
+    userId: number
+}
+
+// Api
+const instance = axios.create({
+    baseURL: 'https://jsonplaceholder.typicode.com/ '
+})
+
+const postsAPI = {
+    getPosts() {
+        return instance.get<PostType[]>('posts')
+    },
+}
+
+// Reducer
+const initState = {
+    error: null as string | null,
+    posts: [] as PostType[]
+}
+
+type InitStateType = typeof initState
+
+const appReducer = (state: InitStateType = initState, action: ActionsType): InitStateType => {
+    switch (action.type) {
+        case 'POSTS/GET-POSTS':
+            return {...state, posts: action.posts}
+
+        case 'POSTS/SET-ERROR':
+            return {...state, error: action.error}
+
+        default:
+            return state
+    }
+}
+
+
+const getPostsAC = (posts: PostType[]) => ({type: 'POSTS/GET-POSTS', posts} as const)
+const setError = (error: string | null) => ({type: 'POSTS/SET-ERROR', error} as const)
+type ActionsType = ReturnType<typeof getPostsAC> | ReturnType<typeof setError>
+
+// Thunk
+const getPostsTC = (): AppThunk => (dispatch) => {
+    postsAPI.getPosts()
+        .then((res) => {
+            dispatch(getPostsAC(res.data))
+        })
+        .catch((e: AxiosError) => {
+        })
+}
+
+
+// Store
+const rootReducer = combineReducers({
+    app: appReducer,
+})
+
+const store = createStore(rootReducer, applyMiddleware(thunk))
+type RootState = ReturnType<typeof store.getState>
+type AppDispatch = ThunkDispatch<RootState, unknown, ActionsType>
+type AppThunk<ReturnType = void> = ThunkAction<ReturnType, RootState, unknown, ActionsType>
+const useAppDispatch = () => useDispatch<AppDispatch>()
+const useAppSelector: TypedUseSelectorHook<RootState> = useSelector
+
+
+// Components
+export const App = () => {
+
+    const dispatch = useAppDispatch()
+
+    const posts = useAppSelector(state => state.app.posts)
+    const error = useAppSelector(state => state.app.error)
+
+    useEffect(() => {
+        dispatch(getPostsTC())
+    }, [])
+
+    return (
+        <>
+            <h1>📜 Список постов</h1>
+            {
+                posts.length
+                    ?
+                    posts.map(c => {
+                        return <div key={c.id}><b>Описание</b>: {c.body} </div>
+                    })
+                    :
+                    <h3>❌ Посты не подгрузились. Произошла какая-то ошибка. Выведите сообщение об ошибке на экран</h3>
+            }
+            <h2 style={{color: 'red'}}>{!!error && error}</h2>
+        </>
+    )
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
+root.render(<Provider store={store}> <App/></Provider>)
+
+// Описание:
+// ❌ Посты не подгрузились. Произошла какая-то ошибка.
+// Чинить приложение не нужно (если только для себя, в ответе это не учитывается).
+// Задача: вывести сообщение об ошибке на экран.
+// В качестве ответа указать строку коду, которая позволит это осуществить
+// Пример ответа: const store = createStore(rootReducer, applyMiddleware(thunk))
+// dispatch(setError(e.message)) +
+
+7
+
+
+
+import React from 'react'
+import ReactDOM from 'react-dom/client';
+import { applyMiddleware, combineReducers, legacy_createStore as createStore } from 'redux'
+import { Provider, TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux'
+import axios, { AxiosError } from 'axios';
+import thunk, { ThunkAction, ThunkDispatch } from 'redux-thunk';
+
+// Types
+type PhotoType = {
+    albumId: number
+    id: number
+    title: string
+    url: string
+    thumbnailUrl: string
+}
+
+// Api
+const instance = axios.create({
+    baseURL: 'https://jsonplaceholder.typicode.com/'
+})
+
+const photosAPI = {
+    async getPhotos() {
+        // Имитация длительного запроса, чтобы была видна крутилка
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        return instance.get<PhotoType[]>('photos1?_limit=3')
+    },
+}
+
+
+// Reducer
+const initState = {
+    isLoading: false,
+    error: null as string | null,
+    photos: [] as PhotoType[]
+}
+
+type InitStateType = typeof initState
+
+const appReducer = (state: InitStateType = initState, action: ActionsType): InitStateType => {
+    switch (action.type) {
+        case 'PHOTO/GET-PHOTOS':
+            return {...state, photos: action.photos}
+        case 'PHOTO/IS-LOADING':
+            return {...state, isLoading: action.isLoading}
+        case 'PHOTO/SET-ERROR':
+            return {...state, error: action.error}
+        default:
+            return state
+    }
+}
+
+const getPhotosAC = (photos: PhotoType[]) => ({type: 'PHOTO/GET-PHOTOS', photos} as const)
+const setLoadingAC = (isLoading: boolean) => ({type: 'PHOTO/IS-LOADING', isLoading} as const)
+const setError = (error: string | null) => ({type: 'PHOTO/SET-ERROR', error} as const)
+type ActionsType =
+    | ReturnType<typeof getPhotosAC>
+    | ReturnType<typeof setLoadingAC>
+    | ReturnType<typeof setError>
+
+const getPhotosTC = (): AppThunk => (dispatch) => {
+    dispatch(setLoadingAC(true))
+    photosAPI.getPhotos()
+        .then((res) => {
+            dispatch(getPhotosAC(res.data))
+        })
+        .catch((e: AxiosError) => {
+            dispatch(setError(e.message))
+        })
+}
+
+// Store
+const rootReducer = combineReducers({
+    app: appReducer
+})
+
+const store = createStore(rootReducer, applyMiddleware(thunk))
+type RootState = ReturnType<typeof store.getState>
+type AppDispatch = ThunkDispatch<RootState, unknown, ActionsType>
+type AppThunk<ReturnType = void> = ThunkAction<ReturnType, RootState, unknown, ActionsType>
+const useAppDispatch = () => useDispatch<AppDispatch>()
+const useAppSelector: TypedUseSelectorHook<RootState> = useSelector
+
+
+// Loader
+export const Loader = () => {
+    return (
+        <h1>Loading ...</h1>
+    )
+}
+
+// App
+const App = () => {
+    const dispatch = useAppDispatch()
+
+    const photos = useAppSelector(state => state.app.photos)
+    const isLoading = useAppSelector(state => state.app.isLoading)
+    const error = useAppSelector(state => state.app.error)
+
+    const getPhotosHandler = () => {
+        dispatch(getPhotosTC())
+    };
+
+    return (
+        <>
+            <h1>📸 Фото</h1>
+            <h2 style={{color: 'red'}}>{!!error && error}</h2>
+            {isLoading && <Loader/>}
+            {
+                photos.map(p => {
+                    return <div key={p.id}>
+                        <b>title</b>: {p.title}
+                        <div><img src={p.thumbnailUrl} alt=""/></div>
+                    </div>
+                })
+            }
+            <button onClick={getPhotosHandler}>Подгрузить фотографии</button>
+        </>
+    )
+}
+
+
+const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
+root.render(<Provider store={store}> <App/></Provider>)
+
+
+// Описание:
+// При нажатии на кнопку "Подгрузить фотографии" появляется Loading... и сообщение об ошибке.
+// Ваша задача состоит в том, чтобы спрятать Loader независимо от того, как завершится запрос на сервер.
+// Т.е. если ответ придет успешный - Loader убираем
+//      если ответ придет с ошибкой - Loader тоже убираем.
+// Напишите код, с помощью которого можно реализовать данную задачу
+// В качестве ответа напишите строку кода.
+// Пример ответа: .then(() =>  dispatch(getPhotosAC(res.data)))
+
+
+8
+
+
+
+
+import React, { useEffect } from 'react'
+import ReactDOM from 'react-dom/client';
+import { applyMiddleware, combineReducers, legacy_createStore as createStore, Dispatch } from 'redux'
+import thunk, { ThunkAction, ThunkDispatch } from 'redux-thunk'
+import { Provider, TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux'
+import axios, { AxiosError } from 'axios'
+
+// TYPES
+type UserType = {
+    avatar: string
+    email: string
+    first_name: string
+    id: 1
+    last_name: string
+}
+
+type ColorType = {
+    color: string
+    id: number
+    name: string
+    pantone_value: string
+    year: number
+}
+
+type CommonResponseType<T> = {
+    total: number
+    total_pages: number
+    page: number
+    per_page: number
+    support: {
+        url: string
+        text: string
+    }
+    data: T
+}
+
+// API
+const instance = axios.create({baseURL: 'https://reqres.in/api/'})
+
+const reqresAPI = {
+    getUsers() {
+        return instance.get<CommonResponseType<UserType[]>>('users?delay=3')
+    },
+    getColors() {
+        return instance.get<CommonResponseType<ColorType[]>>('colors?delay=3')
+    }
+}
+
+
+// Reducer
+const initState = {
+    isLoading: false,
+    error: null as string | null,
+    users: [] as UserType[],
+    colors: [] as ColorType[],
+}
+
+type InitStateType = typeof initState
+
+const appReducer = (state: InitStateType = initState, action: ActionsType): InitStateType => {
+    switch (action.type) {
+        case 'APP/GET-USERS':
+            return {...state, users: action.users}
+        case 'APP/GET-COLORS':
+            return {...state, colors: action.colors}
+        case 'APP/IS-LOADING':
+            return {...state, isLoading: action.isLoading}
+        case 'APP/SET-ERROR':
+            return {...state, error: action.error}
+        default:
+            return state
+    }
+}
+
+const getUsersAC = (users: UserType[]) => ({type: 'APP/GET-USERS', users} as const)
+const getColorsAC = (colors: ColorType[]) => ({type: 'APP/GET-COLORS', colors} as const)
+const setLoadingAC = (isLoading: boolean) => ({type: 'APP/IS-LOADING', isLoading} as const)
+const setError = (error: string | null) => ({type: 'APP/SET-ERROR', error} as const)
+type ActionsType =
+    | ReturnType<typeof getUsersAC>
+    | ReturnType<typeof getColorsAC>
+    | ReturnType<typeof setLoadingAC>
+    | ReturnType<typeof setError>
+
+// Utils functions
+function baseSuccessHandler<T>(dispatch: Dispatch, actionCreator: Function, data: T) {
+    dispatch(actionCreator(data))
+    dispatch(setLoadingAC(false))
+}
+
+// Thunk
+const getUsersTC = (): AppThunk => (dispatch) => {
+    dispatch(setLoadingAC(true))
+    reqresAPI.getUsers()
+        .then((res) => {
+            // XXX
+        })
+        .catch((e: AxiosError) => {
+            dispatch(setError(e.message))
+            dispatch(setLoadingAC(false))
+        })
+}
+
+const getColorsTC = (): AppThunk => (dispatch) => {
+    dispatch(setLoadingAC(true))
+    reqresAPI.getColors()
+        .then((res) => {
+            // YYY
+        })
+        .catch((e: AxiosError) => {
+            dispatch(setError(e.message))
+            dispatch(setLoadingAC(false))
+        })
+}
+
+// Store
+const rootReducer = combineReducers({
+    app: appReducer,
+})
+
+const store = createStore(rootReducer, applyMiddleware(thunk))
+type RootState = ReturnType<typeof store.getState>
+type AppDispatch = ThunkDispatch<RootState, unknown, ActionsType>
+type AppThunk<ReturnType = void> = ThunkAction<ReturnType, RootState, unknown, ActionsType>
+const useAppDispatch = () => useDispatch<AppDispatch>()
+const useAppSelector: TypedUseSelectorHook<RootState> = useSelector
+
+
+// COMPONENTS
+// Loader
+export const Loader = () => {
+    return (
+        <h1>Loading ...</h1>
+    )
+}
+
+
+const App = () => {
+    return (
+        <>
+            <h1>Reqres API</h1>
+            <Users/>
+            <Colors/>
+        </>
+    )
+}
+
+const Users = () => {
+    const dispatch = useAppDispatch()
+    const users = useAppSelector(state => state.app.users)
+    const error = useAppSelector(state => state.app.error)
+    const isLoading = useAppSelector(state => state.app.isLoading)
+
+    useEffect(() => {
+        dispatch(getUsersTC())
+    }, [])
+
+    return (
+        <div>
+            <h2>Users</h2>
+            {!!error && <h2 style={{color: 'red'}}>{error}</h2>}
+            {isLoading && <Loader/>}
+            <div style={{display: 'flex'}}>
+                {
+                    users.map(u => {
+                        return (
+                            <div key={u.id} style={{marginRight: '25px'}}>
+                                <p>{u.first_name}</p>
+                                <img src={u.avatar} alt=""/>
+                            </div>
+                        )
+                    })
+                }</div>
+        </div>
+    )
+}
+
+const Colors = () => {
+    const dispatch = useAppDispatch()
+    const colors = useAppSelector(state => state.app.colors)
+    const error = useAppSelector(state => state.app.error)
+    const isLoading = useAppSelector(state => state.app.isLoading)
+
+    useEffect(() => {
+        dispatch(getColorsTC())
+    }, [])
+
+    return (
+        <div>
+            <h2>Colors</h2>
+            {!!error && <h2 style={{color: 'red'}}>{error}</h2>}
+            {isLoading && <Loader/>}
+            <div style={{display: 'flex'}}>
+                {
+                    colors.map(c => {
+                        return (
+                            <div key={c.id} style={{marginRight: '25px'}}>
+                                <p>{c.name}</p>
+                                <div style={{backgroundColor: c.color, width: '128px', height: '30px'}}>
+                                    <b>{c.color}</b>
+                                </div>
+                            </div>
+                        )
+                    })
+                }</div>
+        </div>
+    )
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
+root.render(<Provider store={store}> <App/></Provider>)
+
+
+// Описание:
+// Перед вами список Users, список Colors и Loading ...
+// Откройте network и вы увидите что запросы на сервер уходят и возвращаются с данными,
+// но вместо этого пользователь видит на экране Loader.
+// Для обработки успешного результата написана утилитная функция baseSuccessHandler.
+// Ваша задача воспользоваться этой функцией отобразить Users и Colors
+// Что нужно написать вместо XXX и YYY, чтобы реализовать данную задачу?
+// Ответ дайте через пробел.
+// Пример ответа: dispatch(baseSuccessHandler(1,2,3))  dispatch(baseSuccessHandler(3,2,1)
+//baseSuccessHandler(dispatch, getUsersAC, res.data.data) baseSuccessHandler(dispatch, getColorsAC, res.data.data)
+//
+
+
+
+9
+
+
+
+
+import { useFormik } from 'formik';
+import React from 'react'
+import ReactDOM from 'react-dom/client';
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
+
+
+// Types
+type LoginFieldsType = {
+    firstName?: string
+}
+
+// Main
+export const Login = () => {
+
+    const formik = useFormik({
+        initialValues: {
+            firstName: '',
+        },
+        validate: (values) => {
+            const errors: LoginFieldsType = {};
+            return errors
+        },
+        onSubmit: values => {
+            alert(JSON.stringify(values, null, 2));
+        }
+    });
+
+
+    return (
+        <form onSubmit={formik.handleSubmit}>
+            <div>
+                <input placeholder={'Введите имя'} {...formik.getFieldProps('firstName')}/>
+            </div>
+            <button type="submit" disabled={!(formik.isValid && formik.dirty)}>Отправить</button>
+        </form>
+    );
+}
+
+// App
+export const App = () => {
+    return (
+        <Routes>
+            <Route path={''} element={<Login/>}/>
+        </Routes>
+    )
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
+root.render(<BrowserRouter><App/></BrowserRouter>)
+
+// Описание:
+// Начните вводить в поле firstName символы. После ввода первого символа кнопка "Отправить" раздизаблится.
+// Задача: кнопка "Отправить" должна раздизаблиться только в том случае, если длинна имени больше 5 символов.
+// Т.е. вам необходимо самостоятельно написать эту валидацию для поля firstName.
+// ❗ В качестве текста ошибки напишите 'Must be 5 characters or more'
+// ❗ Текст ошибки выводить не нужно (только если для себя поиграться).
+// В качестве ответа напишите полностью строку кода с условием.
+// Пример ответа: return errors.firstName = 'Must be 5 characters or more'
+// ❗ Сторонние библиотеки (например yup) использовать запрещено
+//             if(values.firstName.length < 5) return {errors: 'Must be 5 characters or more'}  ---
+
+
+
+
+10
+
+
+
+import { useFormik } from 'formik';
+import React, { useEffect } from 'react'
+import { Provider, TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
+import ReactDOM from 'react-dom/client';
+import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
+import axios, { AxiosError } from 'axios';
+import { applyMiddleware, combineReducers, legacy_createStore as createStore, Dispatch } from 'redux';
+import thunk, { ThunkAction, ThunkDispatch } from 'redux-thunk';
+
+
+// Types
+type NullableType<T> = null | T
+type UndefinedType<T> = undefined | T
+
+type UserType = {
+    avatar: string
+    email: string
+    first_name: string
+    id: 1
+    last_name: string
+}
+
+type LoginFieldsType = {
+    email: string
+    password: string
+}
+
+// API
+const instance = axios.create({
+    baseURL: 'https://reqres.in/api/'
+})
+
+const reqresAPI = {
+    getUsers() {
+        return instance.get('users?delay=1&per_page=12')
+    },
+    login(data: LoginFieldsType) {
+        return instance.post('login?delay=1', data)
+    },
+}
+
+
+// Reducer
+const initState = {
+    isLoading: false,
+    error: null as NullableType<string>,
+    isLoggedIn: false,
+    randomUser: null as NullableType<UserType>
+}
+
+type InitStateType = typeof initState
+
+const appReducer = (state: InitStateType = initState, action: ActionsType): InitStateType => {
+    switch (action.type) {
+        case 'APP/SET-RANDOM-USER':
+            return {...state, randomUser: action.user}
+        case 'APP/SET-IS-LOGGED-IN':
+            return {...state, isLoggedIn: action.isLoggedIn}
+        case 'APP/IS-LOADING':
+            return {...state, isLoading: action.isLoading}
+        case 'APP/SET-ERROR':
+            return {...state, error: action.error}
+        default:
+            return state
+    }
+}
+
+// Actions
+const setRandomUserAC = (user: UserType) => ({type: 'APP/SET-RANDOM-USER', user} as const)
+const setIsLoggedIn = (isLoggedIn: boolean) => ({type: 'APP/SET-IS-LOGGED-IN', isLoggedIn} as const)
+const setLoadingAC = (isLoading: boolean) => ({type: 'APP/IS-LOADING', isLoading} as const)
+const setError = (error: string | null) => ({type: 'APP/SET-ERROR', error} as const)
+type ActionsType =
+    | ReturnType<typeof setRandomUserAC>
+    | ReturnType<typeof setIsLoggedIn>
+    | ReturnType<typeof setLoadingAC>
+    | ReturnType<typeof setError>
+
+
+// Utils
+const thunkFinallyHandler = (dispatch: Dispatch) => {
+    dispatch(setLoadingAC(false))
+    setTimeout(() => {
+        dispatch(setError(null))
+    }, 3000)
+}
+
+// Thunk
+const getUsersTC = (): AppThunk => (dispatch) => {
+    dispatch(setLoadingAC(true))
+
+    const getRandomUser = (users: UserType[]): UndefinedType<UserType> => {
+        const randomUserId = Math.floor(Math.random() * 12) + 1
+        return users.find(u => u.id === randomUserId)
+    }
+
+    reqresAPI.getUsers()
+        .then((res) => {
+            const user = getRandomUser(res.data.data)
+            if (user) {
+                dispatch(setRandomUserAC(user))
+            }
+        })
+        .catch((e: AxiosError) => {
+            dispatch(setError(e.message))
+        })
+        .finally(() => {
+            thunkFinallyHandler(dispatch)
+        })
+}
+
+const loginTC = (values: LoginFieldsType): AppThunk => (dispatch) => {
+    dispatch(setLoadingAC(true))
+    reqresAPI.login(values)
+        .then((res) => {
+            dispatch(setIsLoggedIn(true))
+            alert('Вы залогинились успешно')
+        })
+        .catch((e) => {
+            const error = e.response ? (e.response?.data.error || 'Some error') : e.message
+            dispatch(setError(error))
+        })
+        .finally(() => {
+            thunkFinallyHandler(dispatch)
+        })
+}
+
+// Store
+const rootReducer = combineReducers({
+    app: appReducer,
+})
+
+const store = createStore(rootReducer, applyMiddleware(thunk))
+type RootState = ReturnType<typeof store.getState>
+type AppDispatch = ThunkDispatch<RootState, unknown, ActionsType>
+type AppThunk<ReturnType = void> = ThunkAction<ReturnType, RootState, unknown, ActionsType>
+const useAppDispatch = () => useDispatch<AppDispatch>()
+const useAppSelector: TypedUseSelectorHook<RootState> = useSelector
+
+
+// Loader
+export const Loader = () => {
+    return <h1>Loading ...</h1>
+}
+
+// Profile
+export const Profile = () => {
+    return <h2>😎 Profile</h2>
+}
+
+// Login
+export const Login = () => {
+
+    const dispatch = useAppDispatch()
+    const navigate = useNavigate()
+
+    const randomUser = useAppSelector(state => state.app.randomUser)
+    const isLoggedIn = useAppSelector(state => state.app.isLoggedIn)
+    const error = useAppSelector(state => state.app.error)
+    const isLoading = useAppSelector(state => state.app.isLoading)
+
+    useEffect(() => {
+        dispatch(getUsersTC())
+    }, [])
+
+    const formik = useFormik({
+        initialValues: {
+            email: randomUser?.email ?? '',
+            password: '',
+        },
+        enableReinitialize: true,
+        onSubmit: values => {
+            dispatch(loginTC(values))
+        }
+    });
+
+    return (
+        <div>
+            {!!error && <h2 style={{color: 'red'}}>{error}</h2>}
+            {isLoading && <Loader/>}
+            <form onSubmit={formik.handleSubmit}>
+                <div>
+                    <input placeholder={'Введите email'}
+                           {...formik.getFieldProps('email')}/>
+                </div>
+                <div>
+                    <input type={'password'}
+                           placeholder={'Введите пароль'}
+                           {...formik.getFieldProps('password')}/>
+                </div>
+                <button type="submit">Залогиниться</button>
+            </form>
+        </div>
+    );
+}
+
+// App
+export const App = () => {
+    return (
+        <Routes>
+            <Route path={''} element={<Login/>}/>
+            <Route path={'profile'} element={<Profile/>}/>
+        </Routes>
+    )
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
+root.render(<Provider store={store}><BrowserRouter><App/></BrowserRouter></Provider>)
+
+
+// Описание:
+// ❗ Логин вводить не нужно (из-за Api можно вводить только определенные email).
+// Введите любой пароль и попробуйте залогиниться.
+// Если вы увидели alert с успешным сообщением -
+// это значит, что запрос успешно прошел.
+// Задача: при успешной логинизации, редиректнуть пользователя на страницу Profile.
+// Напишите правильную строку кода
+// Пример ответа:  console.log('If login => redirect to profile')
+
+
+
+
+
+
+
+
